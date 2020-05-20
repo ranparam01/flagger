@@ -255,7 +255,9 @@ In case of of the above error use the following commands
 check if you have specific account for tiller. Usually it has same name - "tiller":
 
 kubectl get serviceaccount --namespace kube-system
+```
 create if not:
+```
 kubectl create serviceaccount tiller --namespace kube-system
 
 ```
@@ -266,7 +268,9 @@ check if you have role or clusterrole (cluster role is "better" for newbies - it
 
 kubectl get clusterrole --namespace kube-system
 
+```
 you can check role content via:
+```
 kubectl get clusterrole cluster-admin -o yaml --namespace kube-system
 
 ```
