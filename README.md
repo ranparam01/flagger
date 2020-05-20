@@ -223,3 +223,97 @@ If you have any questions about Flagger and progressive delivery:
 * File an [issue](https://github.com/weaveworks/flagger/issues/new).
 
 Your feedback is always welcome!
+
+
+# Installing flagger 
+
+Use the following commands to install Flagger in Kubernetes
+
+```
+helm repo add flagger https://flagger.app
+
+kubectl apply -f https://raw.githubusercontent.com/weaveworks/flagger/master/artifacts/flagger/crd.yaml
+
+helm upgrade -i flagger flagger/flagger \
+--namespace=istio-system \
+--set crd.create=false \
+--set meshProvider=istio \
+--set metricsServer=http://prometheus:9090
+
+```
+
+As a pre-requisite istion should be enabled in the cluster. Using helm to deploy might cause issues in kubernetes, The above process might end up giving the following error 
+
+```
+Error: configmaps is forbidden: User "system:serviceaccount:kube-system:default" cannot list resource "configmaps" in API group "" in the namespace "kube-system"
+
+```
+
+In case of of the above error use the following commands 
+
+```
+check if you have specific account for tiller. Usually it has same name - "tiller":
+
+kubectl get serviceaccount --namespace kube-system
+create if not:
+kubectl create serviceaccount tiller --namespace kube-system
+
+```
+
+check if you have role or clusterrole (cluster role is "better" for newbies - it is cluster-wide unlike namespace-wide role). If this is not a production, you can use highly privileged role "cluster-admin":
+
+```
+
+kubectl get clusterrole --namespace kube-system
+
+you can check role content via:
+kubectl get clusterrole cluster-admin -o yaml --namespace kube-system
+
+```
+
+check if account "tiller" in first clause has a binding to clusterrole "cluster-admin" that you deem sufficient
+
+```
+
+kubectl get clusterrolebinding --namespace kube-system
+if it is hard to figure out based on names, you can simply create new:
+
+kubectl create clusterrolebinding tiller-cluster-admin --clusterrole=cluster-admin --serviceaccount=kube-system:tiller --namespace kube-system
+
+```
+
+Finally, when you have the account, the role and the binding between them, you can check if you really act as this account:
+
+```
+kubectl get deploy tiller-deploy -o yaml --namespace kube-system
+
+```
+
+I suspect that your output will not have settings "serviceAccount" and "serviceAccountName":
+
+```
+dnsPolicy: ClusterFirst
+restartPolicy: Always
+schedulerName: default-scheduler
+securityContext: {}
+terminationGracePeriodSeconds: 30
+```
+
+if yes, than add an account you want tiller to use:
+
+```
+kubectl [--namespace kube-system] patch deploy tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
+
+```
+Now you repeat previous check command and see the difference:
+
+```
+dnsPolicy: ClusterFirst
+restartPolicy: Always
+schedulerName: default-scheduler
+securityContext: {}
+serviceAccount: tiller                     <-- new line
+serviceAccountName: tiller          <-- new line
+terminationGracePeriodSeconds: 30
+
+```
